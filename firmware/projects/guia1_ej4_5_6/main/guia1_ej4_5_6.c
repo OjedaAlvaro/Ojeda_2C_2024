@@ -30,8 +30,8 @@
 /*==================[macros and definitions]=================================*/
 
 /*!
- * \def ON
- * \brief LED encendido 
+ * @def ON
+ * @brief LED encendido 
  */
 #define ON 1
 /*!
