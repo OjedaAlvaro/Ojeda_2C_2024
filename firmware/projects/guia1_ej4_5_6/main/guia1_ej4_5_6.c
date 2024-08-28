@@ -2,7 +2,7 @@
  *
  * @section genDesc General Description
  *
- * This section describes how the program works.
+ * Con estos ejercicios podremos mostrar numeros en una pantalla LCD usando la ESP32
  *
  * <a href="https://drive.google.com/...">Operation Example</a>
  *
@@ -28,8 +28,19 @@
 #include <stdint.h>
 #include "gpio_mcu.h"
 /*==================[macros and definitions]=================================*/
+
+/*!
+ * \def ON
+ * \brief LED encendido 
+ */
 #define ON 1
+/*!
+ * \def OFF
+ * \brief LED apagado 
+ */
 #define OFF 0
+
+
 /*==================[internal data definition]===============================*/
 typedef struct
 {
@@ -39,9 +50,16 @@ typedef struct
 
 
 /*==================[internal functions declaration]=========================*/
-int8_t  convertToBcdArray (uint32_t data, uint8_t digits, uint8_t * bcd_number)
+
+/**
+ * @brief Convierte un numero decimal en BCD y lo guarda en un arreglo
+ * @param data Decimal a convertir
+ * @param digitos cantidad de digitos del numero decimal
+ * @param bcd_number Arreglo donde se va a guardar el numero en BCD
+ */
+void  convertToBcdArray (uint32_t data, uint8_t digits, uint8_t * bcd_number)
 {
-	int8_t salida=0;
+	
 	for (int i = digits - 1; i >= 0; i--) {
 
 		
@@ -49,9 +67,14 @@ int8_t  convertToBcdArray (uint32_t data, uint8_t digits, uint8_t * bcd_number)
         data /= 10;     
 		                                
     }
-	return salida;
 	
 }
+
+/**
+ * @brief cambia el estado de cada GPIO según el estado del bit correspondiente en el BCD ingresado.
+ * @param n_decimal numero que va ser representado
+ * @param param_gpio estructura que contiene la configuración de los puertos
+ */
 void codificarDigito(uint8_t n_decimal,gpioConf_t *param_gpio){
 	// Convertir el dígito decimal a binario y almacenarlo en el arreglo
 	uint8_t arreglo_binario[4];
@@ -60,7 +83,7 @@ void codificarDigito(uint8_t n_decimal,gpioConf_t *param_gpio){
         n_decimal /= 2;
     }
 
-	//fijarme con mascaras el estado de los GPIO
+	//fijarme recorriendo arreglo_binario que led encender
 	for(int j=0;j<4;j++)
 	{
 		if(arreglo_binario[j])
@@ -76,7 +99,28 @@ void codificarDigito(uint8_t n_decimal,gpioConf_t *param_gpio){
 	
 }
 
+/**
+ * @brief Codifica un numero de mas de 1 cifras en un dislay LCD
+ * @param numero numero que va ser representado
+ * @param cantDigitos cantidad de digitos a usar del display
+ * @param valor estructura que contiene la configuración de los puertos
+ * @param pos estructura que mapea los pines que dan el peso del digito
+ */
+
 void codificarMasDigitos(uint32_t numero,uint8_t cantDigitos,gpioConf_t *valor,gpioConf_t *pos){
+
+	uint8_t numero_separado[cantDigitos];
+	convertToBcdArray(numero,cantDigitos,numero_separado);
+	for(int indice=0;indice<3;indice++){
+		//Ahora escribo el valor
+		codificarDigito(numero_separado[indice],valor);
+		//Con esto hago el pulso
+		GPIOOn(pos[indice].pin);
+		GPIOOff(pos[indice].pin);
+		
+		
+	}
+
 	
 
 }
@@ -104,20 +148,26 @@ void app_main(void){
 
 	};
 
-	gpioConf_t Posicion_digitos[]=
+	//codificarDigito(1,arregloGPIO);
+
+	//Ejercicio 6
+	gpioConf_t posicion_digitos[]=
 	{
 		{GPIO_19,GPIO_OUTPUT},
 		{GPIO_18,GPIO_OUTPUT},
 		{GPIO_9,GPIO_OUTPUT}
 
 	};
+	//Inicializo los puertos
+	GPIOInit(posicion_digitos[0].pin,posicion_digitos[0].dir);
+	GPIOInit(posicion_digitos[1].pin,posicion_digitos[1].dir);
+	GPIOInit(posicion_digitos[2].pin,posicion_digitos[2].dir);
 	
-	codificarDigito(1,arregloGPIO);
+	
+	codificarMasDigitos(51,3,arregloGPIO,posicion_digitos);
 
 	
 }
-
-
 
 
 /*==================[end of file]============================================*/
