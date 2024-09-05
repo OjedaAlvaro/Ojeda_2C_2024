@@ -1,8 +1,9 @@
-/*! @mainpage Ejercicio 1 Proyecto 2
+/*! @mainpage Ejercicio 2 Proyecto 2
  *
- * @section Este proyecto implementa el sensor de distancia HC-SR04 para medir la distancia
+ * @section genDesc General Description
+ * Este proyecto implementa el sensor de distancia HC-SR04 para medir la distancia
  * y mostrarlo en un display LCD, asi como tambien una secuencia de LEDS que se encienden de acuerdo
- * y teclas para on/off y Hold
+ * y teclas para on/off y Hold. en este ejercicio se implementa ademas interrupciones y timers
  *
  *
  *
@@ -10,7 +11,9 @@
  *
  * |    Peripheral  |   ESP32   	|
  * |:--------------:|:--------------|
- * | 	PIN_X	 	| 	GPIO_X		|
+ * | 	ECHO	 	| 	GPIO_3		|
+ * |   TRIG	 	    | 	GPIO_2		|
+ *
  *
  *
  * @section changelog Changelog
@@ -37,10 +40,29 @@
 /*==================[macros and definitions]=================================*/
 
 /*==================[internal data definition]===============================*/
+/**
+ * @brief Delay para medir la distancia por el HC-SR04
+ */
 #define DELAY_MEDIR_uS 200000
+
+/**
+ * @brief Delay para mostrar la distancia en el LCD
+ */
 #define DELAY_LCD_uS 1000000
+
+/**
+ * @brief Variable global que almacena si el sensor se encuentra encendido/apagado 
+ */
 bool encendido = true;
+
+/**
+ * @brief Variable global que almacena si Hold esta activo
+ */
 bool hold = false;
+
+/**
+ * @brief Variable global que almacena la distancia medida por el HC-SR04
+ */
 uint16_t distancia = 0;
 
 TaskHandle_t medir_task_handle = NULL;
@@ -57,6 +79,9 @@ void FuncTimerMostrar(void *param)
 	vTaskNotifyGiveFromISR(mostrar_task_handle, pdFALSE); /* Envía una notificación a la tarea asociada al LED_2 */
 }
 
+/**
+ * @brief Controla los LEDs segun la distancia medida por el HC-SR04
+ */
 void ControlarLEDs(void)
 {
 	// Tiene que fijarse que leds prender y apagar
@@ -86,6 +111,12 @@ void ControlarLEDs(void)
 	}
 }
 
+/**
+ * @brief Tarea encargada de medir la distancia con el sensor HC-SR04
+ *
+ * Esta tarea se encarga de medir la distancia con el sensor HC-SR04 y
+ * actualizar la variable global "distancia".
+ */
 static void MedirDistancia(void *pvParameter)
 {
 	while (true)
@@ -106,16 +137,34 @@ static void MedirDistancia(void *pvParameter)
 	}
 }
 
+/**
+ * @brief Interrupción para el switch 1
+ *
+ * Esta función es invocada cuando se produce una interrupción en el switch 1.
+ * La función cambia el valor de la variable global "encendido"
+ */
 void InterrupcionTecla1(void)
 {
 	encendido = !encendido;
 }
 
+/**
+ * @brief Interrupción para el switch 2
+ *
+ * Esta función es invocada cuando se produce una interrupción en el switch 2.
+ * La función cambia el valor de la variable global "hold"
+ */
 void InterrupcionTecla2(void)
 {
 	hold = !hold;
 }
 
+/**
+ * @brief Tarea encargada de mostrar en el display LCD la distancia medida
+ * por el sensor HC-SR04. La tarea tambien se encarga de controlar los LEDs
+ * según la distancia medida.
+
+ */
 static void MostrarDisplayLCD(void *pvParameter)
 {
 	while (true)

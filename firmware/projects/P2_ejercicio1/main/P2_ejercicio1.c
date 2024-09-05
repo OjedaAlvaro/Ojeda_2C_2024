@@ -10,8 +10,8 @@
  *
  * |    Peripheral  |   ESP32   	|
  * |:--------------:|:--------------|
- * | 	PIN_X	 	| 	GPIO_X		|
- *
+ * | 	ECHO	 	| 	GPIO_3		|
+ * | 	TRIG	 	| 	GPIO_2		|
  *
  * @section changelog Changelog
  *
@@ -36,55 +36,102 @@
 /*==================[macros and definitions]=================================*/
 
 /*==================[internal data definition]===============================*/
+/**
+ * @def DELAY_MEDIR
+ * @brief Delay para medir la distancia por el HC-SR04
+ */
 #define DELAY_MEDIR 200
+
+/**
+ * @def DELAY_LCD
+ * @brief Delay para mostrar la distancia en el LCD
+ */
 #define DELAY_LCD 1000
+
+/**
+ * @brief Variable global que almacena si el sensor se encuentra encendido/apagado 
+ */
 bool encendido = true;
+
+/**
+ * @brief Variable global que almacena si Hold esta activo
+ */
 bool hold = false;
+
+/**
+ * @brief Variable global que almacena la distancia medida por el HC-SR04
+ */
 uint16_t distancia = 0;
+
+
 /*==================[internal functions declaration]=========================*/
 
+/**
+ * @brief Controla los LEDs segun la distancia medida por el HC-SR04
+ */
 void ControlarLEDs(void){
-	//Tiene que fijarse que leds prender y apagar
-	if (distancia<10){
+	// Si la distancia es menor a 10 cm, apaga todos los LEDs
+	if (distancia < 10) {
 		LedOff(LED_1);
 		LedOff(LED_2);
 		LedOff(LED_3);
-	}else if(distancia<20){
+	} 
+	// Si la distancia es mayor o igual a 10 cm y menor a 20 cm, prende solo el LED_1
+	else if (distancia < 20) {
 		LedOn(LED_1);
 		LedOff(LED_2);
 		LedOff(LED_3);
-	}else if(distancia<30){
+	} 
+	// Si la distancia es mayor o igual a 20 cm y menor a 30 cm, prende los LEDs 1 y 2
+	else if (distancia < 30) {
 		LedOn(LED_1);
 		LedOn(LED_2);
 		LedOff(LED_3);
-	}else{
+	} 
+	// Si la distancia es mayor o igual a 30 cm, prende todos los LEDs
+	else {
 		LedOn(LED_1);
 		LedOn(LED_2);
 		LedOn(LED_3);
 	}
 }
 
+/**
+ * @brief Tarea encargada de medir la distancia con el sensor HC-SR04
+ *
+ * Esta tarea se encarga de medir la distancia con el sensor HC-SR04 y
+ * actualizar la variable global "distancia".
+ */
 static void MedirDistancia(void *pvParameter)
 {
 	while (true)
 	{
 		if (encendido)
 		{
+			// Medir la distancia en centimetros y actualizar la variable global
 			distancia = HcSr04ReadDistanceInCentimeters();
-		}else {
+		}
+		else
+		{
+			// Apagar el display LCD y todos los LEDs si la variable "encendido" es false
 			LcdItsE0803Off();
 			LedOff(LED_1);
 			LedOff(LED_2);
 			LedOff(LED_3);
 		}
+
+		// Esperar el tiempo especificado antes de medir de nuevo
 		vTaskDelay(DELAY_MEDIR / portTICK_PERIOD_MS);
 	}
 }
 
+ /**
+  * @brief Tarea encargada de leer las teclas y cambiar el estado de la variable encendido
+  * y la variable Hold
+  */
 static void LeerTeclas(void *pvParameter)
 {
 	uint8_t teclas;
-	//SwitchesInit();
 	while (true)
 	{
 		teclas = SwitchesRead();
@@ -101,17 +148,24 @@ static void LeerTeclas(void *pvParameter)
 	}
 }
 
+/**
+ * @brief Tarea encargada de mostrar en el display LCD la distancia medida
+ * por el sensor HC-SR04. La tarea tambien se encarga de controlar los LEDs
+ * según la distancia medida.
+
+ */
 static void MostrarDisplayLCD(void *pvParameter)
 {
 	while (true)
 	{
+
 		if(encendido){
-			if(hold){
-				ControlarLEDs();
-			}else{
+
+			if(!hold){
 				LcdItsE0803Write(distancia);
-				ControlarLEDs();
+
 			}
+			ControlarLEDs();
 		}
 		vTaskDelay(DELAY_LCD / portTICK_PERIOD_MS);
 	}
