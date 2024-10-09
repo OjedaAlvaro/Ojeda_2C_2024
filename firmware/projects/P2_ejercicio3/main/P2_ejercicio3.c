@@ -1,4 +1,4 @@
-/*! @mainpage Ejercicio 2 Proyecto 2
+/*! @mainpage Ejercicio 3 Proyecto 2
  *
  * @section genDesc General Description
  * Este proyecto implementa el sensor de distancia HC-SR04 para medir la distancia
@@ -37,6 +37,7 @@
 #include "switch.h"
 #include "lcditse0803.h"
 #include "timer_mcu.h"
+#include "uart_mcu.h"
 /*==================[macros and definitions]=================================*/
 
 /*==================[internal data definition]===============================*/
@@ -159,10 +160,40 @@ void InterrupcionTecla2(void)
 	hold = !hold;
 }
 
+
+
+/**
+ * @brief Función que se encarga de leer las teclas del UART y lanzar
+ * las interrupciones correspondientes.
+ *
+ * Esta función se encarga de leer un byte del UART y, dependiendo del
+ * valor del byte, invocar a la función InterrupcionTecla1() o a
+ * InterrupcionTecla2().
+ 
+ */
+void FuncionTeclasUart(void *param){
+	uint8_t tecla;
+	UartReadByte(UART_PC, &tecla);
+	switch (tecla){
+		case 'o':
+			/* Invoco a la interrupción para el switch 1 */
+			InterrupcionTecla1();
+			break;
+		case 'h':
+			/* Invoco a la interrupción para el switch 2 */
+			InterrupcionTecla2();
+			break;
+		default:
+			
+			break;
+	}
+
+}
+
 /**
  * @brief Tarea encargada de mostrar en el display LCD la distancia medida
  * por el sensor HC-SR04. La tarea tambien se encarga de controlar los LEDs
- * según la distancia medida.
+ * según la distancia medida y mandar la distancia por el puerto serie.
 
  */
 static void MostrarDisplayLCD(void *pvParameter)
@@ -172,6 +203,9 @@ static void MostrarDisplayLCD(void *pvParameter)
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (encendido)
 		{
+			//si esta midiendo que mande al puerto serie
+			UartSendString(UART_PC,(char*)UartItoa(distancia,10));
+			UartSendString(UART_PC," cm\r\n");
 			if (hold)
 			{
 				ControlarLEDs();
@@ -185,6 +219,7 @@ static void MostrarDisplayLCD(void *pvParameter)
 		
 	}
 }
+
 /*==================[external functions definition]==========================*/
 void app_main(void)
 {
@@ -207,6 +242,17 @@ void app_main(void)
 		.func_p = FuncTimerMostrar,
 		.param_p = NULL};
 	TimerInit(&timer_mostrar);
+	//inicializo el uart
+
+	serial_config_t uart_config = {
+		.port = UART_PC,
+		.baud_rate = 9600,
+		.func_p = FuncionTeclasUart,
+		.param_p = NULL
+		};
+		
+	UartInit(&uart_config);
+
 
 	SwitchActivInt(SWITCH_1, InterrupcionTecla1, NULL);
 	SwitchActivInt(SWITCH_2, InterrupcionTecla2, NULL);
