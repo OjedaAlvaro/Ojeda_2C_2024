@@ -1,8 +1,10 @@
-/*! @mainpage Template
+/*! @mainpage Examen Electronica programable
  *
  * @section genDesc General Description
  *
- * This section describes how the program works.
+ * Examen Individual 04-11-24
+ * Se pretende diseñar un dispositivo basado en la ESP-EDU que permita detectar
+ * eventos peligrosos para ciclistas.
  *
  * <a href="https://drive.google.com/...">Operation Example</a>
  *
